@@ -12,11 +12,11 @@ import pickle
 from urllib.request import urlopen
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
-import sys 
+import sys
 from .utils import download_images
 
 parser = argparse.ArgumentParser()
-    
+
 #parser.add_argument("--i", help='Absolute path to the image url file.', required=True)
 
 args = parser.parse_args()
@@ -40,8 +40,5 @@ for line in lines:
         prev_component = idx_to_valid_urls[prev_idx]
         idx_to_valid_urls[prev_idx] = urljoin(prev_component, line.strip())
 
-image_urls = []
-for idx in idx_to_valid_urls:
-    image_urls.append(idx_to_valid_urls[idx])
-
+image_urls = list(idx_to_valid_urls.values())
 download_images(image_urls, folder_path)

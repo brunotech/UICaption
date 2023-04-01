@@ -17,10 +17,7 @@ def filter_text(tag_text):
     """
     This returns True if the number of words in the text is less than 3
     """
-    if len(tag_text.split(' ')) > 2:
-        return False
-    else:
-        return True
+    return len(tag_text.split(' ')) <= 2
 
 def clean_text(extracted_text):
     """
@@ -90,18 +87,12 @@ def extract_images(website_urls, folder_path):
     img_url_to_text_above = {}
     img_url_to_text_below = {}
     img_url_to_class_name = {}
-    web_url_cntr = 0
     for web_url in tqdm(website_urls):
         logging.info(f"Scraping : {web_url}")
         webpage_image_urls, webpage_image_alt_text, webpage_text_above, webpage_text_below, webpage_image_class_names = fetch_images(web_url)
         time.sleep(1)
-        # remove any duplicate images
-        idx = 0
-        for url in webpage_image_urls:
-            if url in image_url_dict:
-                idx += 1
-                continue
-            else:
+        for idx, url in enumerate(webpage_image_urls):
+            if url not in image_url_dict:
                 image_url_dict[url] = 1
                 image_urls.append(url)
                 image_alt_text.append(webpage_image_alt_text[idx])
@@ -114,10 +105,6 @@ def extract_images(website_urls, folder_path):
                 img_url_to_class_name[url] = webpage_image_class_names[idx]
                 img_url_to_text_above[url] = webpage_text_above[idx]
                 img_url_to_text_below[url] = webpage_text_below[idx]
-                idx += 1
-        web_url_cntr += 1
-        
-    
     # Dump all image_urls
     write_list(image_urls, os.path.join(folder_path, 'ui_images.p'))
 
@@ -142,19 +129,19 @@ def fetch_images(website_url):
     except Exception as e:
         print(f"Website url: {website_url} was not retrieved.")
         return [],[],[],[],[]
-    
+
     img_tags = soup.find_all('img', src=True, alt=True)
-    
+
     urls = [img['src'] for img in img_tags]
-    
+
     # Extract all image captions. If img does not have alt text, append empty string.
     image_alt_text = [img['alt'] for img in img_tags]
-    
+
     # Format urls to get list of all image urls from the webpage
-    image_urls = []  
+    image_urls = []
     for url in urls:
         if 'http' not in url:
-            url = '{}{}'.format(website_url, url)
+            url = f'{website_url}{url}'
         image_urls.append(url)
 
     # Extract text
@@ -200,7 +187,7 @@ def fetch_images(website_url):
             text_above.append('')
         else:
             text_above.append(clean_text(prev_tag.getText()))
-        
+
         if next_not_found:
             text_below.append('')
         else:
@@ -251,13 +238,14 @@ def persist_image(folder_path:str, url:str):
         #print(f"ERROR - Could not download {url} - {e}")
         return ''
 
-    fname = os.path.join(folder_path,hashlib.sha1(image_content).hexdigest()[:10] + '.jpg')
+    fname = os.path.join(
+        folder_path, f'{hashlib.sha1(image_content).hexdigest()[:10]}.jpg'
+    )
     try:
-        img_file = open(fname, "wb")
-        img_file.write(image_content)
-        img_file.close()
+        with open(fname, "wb") as img_file:
+            img_file.write(image_content)
     except Exception as e:
         print(f"ERROR - Could not save {url} - {e}")
         return ''
-    
+
     return fname
